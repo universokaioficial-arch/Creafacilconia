@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Descarga tu libro · Crea Fácil con IA</title>
+<style>
+:root{--g1:#8A6B14;--g2:#D4AF37;--g3:#F5DE8A;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 0,rgba(212,175,55,.22),#050505 60%);color:#EDEDED;font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:max(20px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom));text-align:center}
+.c{max-width:520px;width:100%}img{width:220px;max-width:60vw;filter:drop-shadow(0 0 30px rgba(212,175,55,.4))}
+h1{font-size:clamp(26px,6vw,36px);line-height:1.15;margin:8px 0 10px;background:linear-gradient(100deg,var(--g1),var(--g3),var(--g2));-webkit-background-clip:text;background-clip:text;color:transparent}
+p{color:#c9c9c9}.btn{display:inline-block;margin:14px 0 6px;padding:18px 34px;border-radius:14px;background:linear-gradient(135deg,var(--g3),var(--g2) 50%,var(--g1));color:#000;font-weight:900;font-size:18px;text-decoration:none;border:0;cursor:pointer;box-shadow:0 10px 40px rgba(212,175,55,.4)}
+input{width:100%;padding:13px;border-radius:10px;border:1px solid #333;background:#111;color:#fff;font:inherit;margin-top:8px}
+.s{font-size:13px;color:#888}[hidden]{display:none!important}
+</style></head><body><div class="c">
+<img src="logo.webp" alt="Crea Fácil con IA">
+<div id="ver"><h1>Verificando tu pago…</h1><p>Un momento, por favor.</p></div>
+<div id="ok" hidden><h1>¡Gracias por tu compra!</h1><p>Tu pago fue aprobado. Descarga tu libro de 100 prompts:</p><a class="btn" id="dl" href="#" download>DESCARGAR MI LIBRO (PDF)</a><p class="s">Guárdalo en un lugar seguro. Si el botón no funciona, escríbenos con tu ID de transacción.</p></div>
+<div id="msg" hidden><h1 id="mt"></h1><p id="mp"></p><button class="btn" id="rl">Volver a intentar</button></div>
+<div id="form" hidden><h1>Descarga tu libro</h1><p>Pega el <b>ID de transacción</b> que aparece en tu comprobante de Wompi o en el correo del pago.</p><input id="tid" placeholder="ID de transacción" autocomplete="off"><button class="btn" id="go">VERIFICAR Y DESCARGAR</button></div>
+<p class="s">Gio Bastidas · Kai Universo · Pasto, Colombia</p>
+</div>
+<script>
+var $=function(i){return document.getElementById(i)};
+var id=new URLSearchParams(location.search).get("id");
+var T={pendiente:["Tu pago aún se está confirmando","Espera un minuto y vuelve a intentar."],no_aprobada:["El pago no fue aprobado","Si ya pagaste, espera unos minutos o revisa tu comprobante de Wompi."],no_encontrada:["No encontramos esa transacción","Revisa que el ID esté completo y sea correcto."],otro_pago:["Ese pago no corresponde a este libro","Verifica que el ID sea el de tu compra."],default:["No pudimos verificar el pago","Inténtalo de nuevo en unos minutos."]};
+function hide(){["ver","ok","msg","form"].forEach(function(x){$(x).hidden=true})}
+function run(tid){
+  hide();$("ver").hidden=false;
+  fetch("/api/descargar?check=1&id="+encodeURIComponent(tid)).then(function(r){return r.json()}).then(function(d){
+    hide();
+    if(d.ok){$("dl").href="/api/descargar?id="+encodeURIComponent(tid);$("ok").hidden=false;return}
+    var m=T[d.motivo]||T["default"];$("mt").textContent=m[0];$("mp").textContent=m[1];$("msg").hidden=false;
+  }).catch(function(){hide();$("mt").textContent=T["default"][0];$("mp").textContent=T["default"][1];$("msg").hidden=false});
+}
+$("rl").onclick=function(){id?run(id):(hide(),$("form").hidden=false)};
+$("go").onclick=function(){var v=$("tid").value.trim();if(v){id=v;run(v)}};
+if(id){run(id)}else{hide();$("form").hidden=false}
+</script></body></html>

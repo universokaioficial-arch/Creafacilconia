@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Panel · Crea Fácil con IA</title>
+<style>
+:root{--bg:#050505;--card:#101010;--g1:#8A6B14;--g2:#D4AF37;--g3:#F5DE8A;--tx:#EDEDED;--mu:#A8A8A8;color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
+.w{max-width:1000px;margin:0 auto}
+h1{font-size:22px;margin:0}.gold{background:linear-gradient(100deg,var(--g1),var(--g3),var(--g2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+select,input,button{font:inherit;border-radius:10px;border:1px solid #333;background:#111;color:#fff;padding:10px 12px}
+button{background:linear-gradient(135deg,var(--g3),var(--g2));color:#000;font-weight:800;border:0;cursor:pointer}
+button.sec{background:#111;color:var(--g3);border:1px solid var(--g1)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.k{background:var(--card);border:1px solid #2b2410;border-radius:14px;padding:14px}
+.k b{display:block;font-size:30px;color:var(--g2)}.k span{color:var(--mu);font-size:12.5px}
+.box{background:var(--card);border:1px solid #222;border-radius:14px;padding:14px;margin-bottom:14px}
+.box h2{font-size:14px;margin:0 0 10px;color:var(--g3);letter-spacing:.06em;text-transform:uppercase}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.two .box{margin:0}
+canvas{max-width:100%}
+#login{max-width:340px;margin:12vh auto;text-align:center}#login input{width:100%;margin:6px 0}#login button{width:100%;margin-top:8px}
+.err{color:#ff8a8a;font-size:13px;min-height:18px}.mu{color:var(--mu);font-size:13px}
+@media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+</style></head><body>
+<div class="w">
+<div id="login"><h1><span class="gold">Panel de estadísticas</span></h1><p class="mu">Solo para el dueño de la página</p>
+<input id="em" type="email" placeholder="Correo" autocomplete="username"><input id="pw" type="password" placeholder="Contraseña" autocomplete="current-password">
+<button id="go">Entrar</button><div class="err" id="err"></div></div>
+
+<div id="app" hidden>
+<div class="top"><h1><span class="gold">Panel · 100 Prompts con IA</span></h1>
+<div><select id="dias"><option value="7">Últimos 7 días</option><option value="30" selected>Últimos 30 días</option><option value="90">Últimos 90 días</option></select> <button class="sec" id="out">Salir</button></div></div>
+<div class="kpis">
+<div class="k"><b id="k1">–</b><span>Visitas</span></div><div class="k"><b id="k2">–</b><span>Visitantes únicos</span></div>
+<div class="k"><b id="k3">–</b><span>Clics en comprar</span></div><div class="k"><b id="k4">–</b><span>Conversión a clic</span></div></div>
+<div class="box"><h2>Visitas y clics por día</h2><canvas id="c1" height="120"></canvas><p class="mu" id="vacio" hidden>Aún no hay datos. Abre tu página y recarga este panel.</p></div>
+<div class="two"><div class="box"><h2>Dispositivos</h2><canvas id="c2"></canvas></div><div class="box"><h2>De dónde llegan</h2><canvas id="c3"></canvas></div></div>
+<p class="mu">Las horas se muestran en horario de Colombia. Los datos son anónimos.</p>
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="config.js"></script>
+<script>
+var C=window.CONFIG||{},$=function(i){return document.getElementById(i)},charts=[];
+function H(tok){return{"Content-Type":"application/json",apikey:C.supabaseKey,Authorization:"Bearer "+tok}}
+function show(ok){$("login").hidden=ok;$("app").hidden=!ok}
+$("go").onclick=function(){
+  $("err").textContent="";
+  fetch(C.supabaseUrl+"/auth/v1/token?grant_type=password",{method:"POST",headers:{"Content-Type":"application/json",apikey:C.supabaseKey},body:JSON.stringify({email:$("em").value.trim(),password:$("pw").value})})
+  .then(function(r){return r.json()}).then(function(d){
+    if(!d.access_token){$("err").textContent="Correo o contraseña incorrectos";return}
+    sessionStorage.setItem("tok",d.access_token);load()}).catch(function(){$("err").textContent="No se pudo conectar. Revisa config.js"});
+};
+$("out").onclick=function(){sessionStorage.removeItem("tok");show(false)};
+$("dias").onchange=load;
+function mk(id,cfg){var c=new Chart($(id),cfg);charts.push(c)}
+function load(){
+  var tok=sessionStorage.getItem("tok");if(!tok){show(false);return}
+  fetch(C.supabaseUrl+"/rest/v1/rpc/estadisticas",{method:"POST",headers:H(tok),body:JSON.stringify({dias:+$("dias").value})})
+  .then(function(r){if(r.status===401){throw 401}return r.json()}).then(function(d){
+    show(true);charts.forEach(function(c){c.destroy()});charts=[];
+    $("k1").textContent=d.visitas;$("k2").textContent=d.unicos;$("k3").textContent=d.clics;
+    $("k4").textContent=d.visitas?((d.clics/d.visitas*100).toFixed(1)+"%"):"–";
+    $("vacio").hidden=d.por_dia.length>0;
+    Chart.defaults.color="#A8A8A8";Chart.defaults.borderColor="#222";
+    var gold="#D4AF37",pal=["#D4AF37","#F5DE8A","#8A6B14","#fff","#b58a2a","#777","#555","#999"];
+    mk("c1",{type:"line",data:{labels:d.por_dia.map(function(x){return x.dia.slice(5)}),datasets:[
+      {label:"Visitas",data:d.por_dia.map(function(x){return x.visitas}),borderColor:gold,backgroundColor:"rgba(212,175,55,.15)",fill:true,tension:.3},
+      {label:"Clics en comprar",data:d.por_dia.map(function(x){return x.clics}),borderColor:"#fff",tension:.3}]},options:{scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+    mk("c2",{type:"doughnut",data:{labels:d.dispositivos.map(function(x){return x.nombre}),datasets:[{data:d.dispositivos.map(function(x){return x.total}),backgroundColor:pal,borderColor:"#101010"}]}});
+    mk("c3",{type:"bar",data:{labels:d.origenes.map(function(x){return x.nombre}),datasets:[{data:d.origenes.map(function(x){return x.total}),backgroundColor:gold}]},options:{indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+  }).catch(function(){sessionStorage.removeItem("tok");show(false)});
+}
+load();
+</script></body></html>
