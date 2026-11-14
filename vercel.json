@@ -1,0 +1,7 @@
+{
+  "cleanUrls": true,
+  "headers": [
+    { "source": "/panel", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] },
+    { "source": "/gracias", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] }
+  ]
+}
